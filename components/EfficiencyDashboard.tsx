@@ -1,7 +1,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { Manifesto } from '../types';
-import { BarChart3, Clock, TrendingUp, Award, Timer, Users, Box, Zap, Calendar, Filter, ChevronRight } from 'lucide-react';
+import { BarChart3, Clock, Award, Timer, Box, Hourglass, Zap, CheckCircle2, TrendingUp } from 'lucide-react';
 import { CustomDateTimePicker } from './CustomDateTimePicker';
 
 interface EfficiencyDashboardProps {
@@ -45,13 +45,12 @@ export const EfficiencyDashboard: React.FC<EfficiencyDashboardProps> = ({ manife
     return `${h}h ${m}m`;
   };
 
-  // CÁLCULOS
   const atribuicaoRank = useMemo(() => {
     const counts: Record<string, number> = {};
     filteredManifestos.forEach(m => {
       if (m.usuarioResponsavel) counts[m.usuarioResponsavel] = (counts[m.usuarioResponsavel] || 0) + 1;
     });
-    return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 7);
+    return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 8);
   }, [filteredManifestos]);
 
   const turnStats = useMemo(() => {
@@ -95,57 +94,52 @@ export const EfficiencyDashboard: React.FC<EfficiencyDashboardProps> = ({ manife
   const maxHourlyCount = Math.max(...hourlyStats.map(h => h.count), 1);
 
   return (
-    <div className="flex flex-col gap-6 animate-fadeIn">
+    <div className="flex flex-col gap-4 animate-fadeIn h-[calc(100vh-100px)] overflow-hidden">
       
-      {/* HEADER PRINCIPAL (Padrão SMO) */}
-      <div className="bg-[#0f172a] border-2 border-slate-800 p-4 flex flex-col md:flex-row items-center justify-between shadow-xl">
-        <div className="flex items-center gap-4">
-          <div className="p-2 bg-indigo-600 shadow-lg">
-            <BarChart3 size={20} className="text-white" />
+      {/* HEADER PRINCIPAL - Compactado */}
+      <div className="bg-[#0f172a] border-2 border-slate-800 p-3 px-5 flex flex-col md:flex-row items-center justify-between shadow-xl shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="p-1.5 bg-indigo-600 shadow-lg">
+            <BarChart3 size={16} className="text-white" />
           </div>
           <div>
-            <h2 className="text-[14px] font-black text-white uppercase tracking-[0.25em]">EFICIÊNCIA OPERACIONAL</h2>
-            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Analytics Dashboard v2.5</p>
+            <h2 className="text-[12px] font-black text-white uppercase tracking-[0.2em] leading-none">EFICIÊNCIA OPERACIONAL</h2>
+            <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">Analytics Dashboard v2.5</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-4 mt-4 md:mt-0">
-          <div className="flex items-center gap-2 bg-slate-800 p-2 border border-slate-700">
-             <div className="flex flex-col">
-                <label className="text-[8px] font-black text-slate-500 uppercase ml-1 tracking-widest">Filtrar Período</label>
-                <div className="flex items-center gap-2">
-                   <div className="w-32"><CustomDateTimePicker value={dateRange.start} onChange={v => setDateRange(p => ({...p, start: v}))} /></div>
-                   <div className="w-4 h-[1px] bg-slate-600"></div>
-                   <div className="w-32"><CustomDateTimePicker value={dateRange.end} onChange={v => setDateRange(p => ({...p, end: v}))} /></div>
-                </div>
-             </div>
+        <div className="flex items-center gap-4 mt-2 md:mt-0">
+          <div className="flex flex-col">
+            <div className="flex items-center gap-2 bg-slate-800 p-1 border border-slate-700">
+               <div className="w-28"><CustomDateTimePicker value={dateRange.start} onChange={v => setDateRange(p => ({...p, start: v}))} /></div>
+               <div className="w-28"><CustomDateTimePicker value={dateRange.end} onChange={v => setDateRange(p => ({...p, end: v}))} /></div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* GRID SUPERIOR (3 Blocos) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+      {/* GRID SUPERIOR - Altura controlada para não empurrar o gráfico */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 shrink-0 h-[300px]">
         
-        {/* BLOCO 1: RANKING (4/12) */}
+        {/* BLOCO 1: RANKING ATRIBUIÇÃO */}
         <div className="lg:col-span-4 bg-white border-2 border-slate-200 panel-shadow flex flex-col overflow-hidden">
-          <div className="bg-slate-50 px-5 py-3 border-b-2 border-slate-200 flex items-center justify-between">
-            <h3 className="text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] flex items-center gap-2">
-              <Award size={14} className="text-indigo-600" /> Ranking Atribuição
+          <div className="bg-slate-50 px-4 py-2 border-b-2 border-slate-200 flex items-center justify-between shrink-0">
+            <h3 className="text-[9px] font-black text-slate-600 uppercase tracking-[0.2em] flex items-center gap-2">
+              <Award size={12} className="text-indigo-600" /> Ranking Atribuição
             </h3>
           </div>
-          <div className="p-4 flex-1 space-y-2">
+          <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1">
             {atribuicaoRank.length === 0 ? (
-              <div className="h-40 flex items-center justify-center text-slate-300 text-[10px] font-bold uppercase italic">Sem dados ativos</div>
+              <div className="h-full flex items-center justify-center text-slate-300 text-[8px] font-bold uppercase italic">Sem dados ativos</div>
             ) : (
               atribuicaoRank.map(([name, count], idx) => (
-                <div key={name} className="flex items-center justify-between bg-slate-50 p-2.5 border-l-4 border-indigo-500 hover:bg-indigo-50 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <span className="text-[11px] font-black text-indigo-600 font-mono">#{idx+1}</span>
-                    <span className="text-[10px] font-black text-slate-700 uppercase truncate max-w-[150px]">{name}</span>
+                <div key={name} className="flex items-center justify-between bg-slate-50/50 p-2 border-l-4 border-indigo-500">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[9px] font-black text-indigo-600 font-mono">#{idx+1}</span>
+                    <span className="text-[9px] font-black text-slate-700 uppercase truncate max-w-[150px]">{name}</span>
                   </div>
                   <div className="text-right">
-                    <span className="text-sm font-black text-slate-900 font-mono-tech">{count}</span>
-                    <span className="text-[8px] font-bold text-slate-400 uppercase ml-1">un</span>
+                    <span className="text-xs font-black text-slate-900 font-mono-tech">{count}</span>
                   </div>
                 </div>
               ))
@@ -153,67 +147,82 @@ export const EfficiencyDashboard: React.FC<EfficiencyDashboardProps> = ({ manife
           </div>
         </div>
 
-        {/* BLOCO 2: TURNOS (4/12) */}
-        <div className="lg:col-span-4 grid grid-rows-3 gap-4">
+        {/* BLOCO 2: PERFORMANCE POR TURNO */}
+        <div className="lg:col-span-4 grid grid-rows-3 gap-2">
           {[
-            { label: '1º TURNO (06:00 - 13:59)', count: turnStats.t1, done: turnStats.t1_e, color: 'border-blue-500' },
-            { label: '2º TURNO (14:00 - 21:59)', count: turnStats.t2, done: turnStats.t2_e, color: 'border-amber-500' },
-            { label: '3º TURNO (22:00 - 05:59)', count: turnStats.t3, done: turnStats.t3_e, color: 'border-indigo-600' }
+            { label: '1º TURNO', count: turnStats.t1, done: turnStats.t1_e, color: 'border-blue-500' },
+            { label: '2º TURNO', count: turnStats.t2, done: turnStats.t2_e, color: 'border-amber-500' },
+            { label: '3º TURNO', count: turnStats.t3, done: turnStats.t3_e, color: 'border-indigo-600' }
           ].map((t, i) => (
-            <div key={i} className={`bg-white border-2 border-slate-200 panel-shadow flex items-center justify-between px-6 border-l-8 ${t.color}`}>
+            <div key={i} className={`bg-white border-2 border-slate-200 panel-shadow flex items-center justify-between px-6 border-l-4 ${t.color}`}>
               <div>
-                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{t.label}</p>
-                <p className="text-[10px] font-bold text-slate-600 uppercase mt-1">Total Manifesto</p>
+                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{t.label}</p>
+                <p className="text-[9px] font-bold text-slate-600 uppercase">Manifestos</p>
               </div>
               <div className="text-right">
-                <p className="text-3xl font-black text-slate-900 font-mono-tech leading-none">{t.count}</p>
-                <p className="text-[8px] font-black text-emerald-600 uppercase mt-1">Entregues: {t.done}</p>
+                <p className="text-2xl font-black text-slate-900 font-mono-tech leading-none">{t.count}</p>
+                <p className="text-[8px] font-black text-emerald-600 uppercase mt-0.5">Concluídos: {t.done}</p>
               </div>
             </div>
           ))}
         </div>
 
-        {/* BLOCO 3: SLA / LEAD TIME (4/12) */}
-        <div className="lg:col-span-4 grid grid-rows-3 gap-4">
+        {/* BLOCO 3: SLA / LEAD TIME */}
+        <div className="lg:col-span-4 grid grid-rows-3 gap-2">
           {[
-            { label: 'MANIFESTO INICIADO – RECEBIDO', val: slaStats.e, sub: 'Tempo de Espera', color: 'text-blue-600' },
-            { label: 'MANIFESTO FINALIZADO – INICIADO', val: slaStats.p, sub: 'Tempo de Puxe', color: 'text-amber-600' },
-            { label: 'ASSINATURA – FINALIZADO', val: slaStats.a, sub: 'Tempo Assinatura', color: 'text-emerald-600' }
+            { label: 'ESPERA', val: slaStats.e, icon: Hourglass, color: 'text-blue-600', bg: 'bg-blue-50' },
+            { label: 'PROCESSAMENTO', val: slaStats.p, icon: Zap, color: 'text-amber-600', bg: 'bg-amber-50' },
+            { label: 'LIBERAÇÃO', val: slaStats.a, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50' }
           ].map((s, i) => (
-            <div key={i} className="bg-slate-900 border-2 border-slate-800 panel-shadow flex flex-col justify-center px-6 items-center text-center">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{s.label}</p>
-              <p className={`text-3xl font-black font-mono-tech leading-none ${s.color}`}>{formatMinutes(s.val)}</p>
-              <p className="text-[8px] font-bold text-slate-600 uppercase mt-1 italic">{s.sub}</p>
+            <div key={i} className={`bg-white border-2 border-slate-200 panel-shadow flex items-center overflow-hidden`}>
+              <div className={`w-12 h-full flex items-center justify-center ${s.bg} border-r border-slate-100`}>
+                 <s.icon size={18} className={s.color} />
+              </div>
+              <div className="flex-1 px-4 py-2">
+                 <div className="flex items-center justify-between">
+                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">{s.label}</p>
+                    <p className={`text-2xl font-black font-mono-tech leading-none ${s.color}`}>{formatMinutes(s.val)}</p>
+                 </div>
+              </div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* BLOCO 4: FLUXO HORA A HORA (FULL WIDTH) */}
-      <div className="bg-white border-2 border-slate-200 panel-shadow overflow-hidden flex flex-col">
-        <div className="bg-slate-50 px-5 py-3 border-b-2 border-slate-200 flex items-center justify-between">
-          <h3 className="text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] flex items-center gap-2">
-            <Clock size={14} className="text-indigo-600" /> Manifesto Recebido Hora a Hora
-          </h3>
-          <span className="text-[9px] font-black text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-full">Fluxo Diário</span>
+      {/* BLOCO 4: FLUXO HORA A HORA - Toma o resto do espaço disponível */}
+      <div className="bg-white border-2 border-slate-200 panel-shadow overflow-hidden flex flex-col flex-1 min-h-0">
+        <div className="bg-slate-50 px-5 py-2 border-b-2 border-slate-200 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2">
+             <Clock size={14} className="text-indigo-600" />
+             <h3 className="text-[9px] font-black text-slate-600 uppercase tracking-[0.2em]">Fluxo Operacional de Recebimento</h3>
+          </div>
+          <div className="flex items-center gap-3">
+             <span className="text-[9px] font-black text-indigo-500 bg-indigo-50 px-3 py-1 rounded-full uppercase tracking-widest border border-indigo-100 shadow-sm">Dashboard Compact View</span>
+          </div>
         </div>
         
-        <div className="p-8 h-64 flex flex-col justify-end">
-          <div className="flex-1 flex items-end gap-2 border-b-2 border-slate-100">
+        <div className="flex-1 p-6 flex flex-col justify-end bg-white relative overflow-hidden">
+          <div className="absolute inset-x-8 bottom-[52px] top-6 flex flex-col justify-between pointer-events-none opacity-[0.03]">
+             {[1,2,3,4].map(i => <div key={i} className="w-full h-px bg-slate-900"></div>)}
+          </div>
+
+          <div className="flex-1 flex items-end gap-2 border-b-2 border-slate-200 relative z-10 pb-2">
             {hourlyStats.map(h => (
               <div key={h.hour} className="flex-1 flex flex-col items-center group h-full justify-end">
                 <div 
                   className="relative w-full max-w-[40px] flex flex-col items-center" 
-                  style={{ height: `${(h.count / maxHourlyCount) * 90}%` }}
+                  style={{ height: `${(h.count / maxHourlyCount) * 92}%` }}
                 >
                   {h.count > 0 && (
-                    <span className="absolute -top-6 text-[10px] font-black text-indigo-600 font-mono-tech animate-fadeIn">
-                      {h.count}
-                    </span>
+                    <div className="absolute -top-6 flex flex-col items-center animate-fadeIn">
+                       <span className="text-[10px] font-black text-indigo-600 font-mono-tech">
+                        {h.count}
+                       </span>
+                    </div>
                   )}
-                  <div className={`w-full h-full transition-all duration-500 ${h.count > 0 ? 'bg-indigo-500 group-hover:bg-indigo-700' : 'bg-slate-50 border-t border-slate-100'}`}></div>
+                  <div className={`w-full h-full transition-all duration-700 ease-out shadow-sm rounded-t-sm ${h.count > 0 ? 'bg-indigo-500 group-hover:bg-indigo-700' : 'bg-slate-50'}`}></div>
                 </div>
-                <span className={`text-[9px] font-black font-mono-tech mt-3 ${h.count > 0 ? 'text-slate-900' : 'text-slate-300'}`}>
+                <span className={`text-[9px] font-black font-mono-tech mt-2 ${h.count > 0 ? 'text-slate-900' : 'text-slate-300'}`}>
                   {String(h.hour).padStart(2, '0')}
                 </span>
               </div>
@@ -221,15 +230,18 @@ export const EfficiencyDashboard: React.FC<EfficiencyDashboardProps> = ({ manife
           </div>
         </div>
 
-        <div className="p-3 bg-slate-50 border-t border-slate-100 flex items-center justify-center gap-6">
-           <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-indigo-500"></div>
-              <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Volume Recebimento</span>
+        <div className="p-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between px-8 shrink-0">
+           <div className="flex items-center gap-6">
+              <div className="flex items-center gap-2">
+                 <div className="w-3 h-3 bg-indigo-500 shadow-sm rounded-sm"></div>
+                 <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Recebimento</span>
+              </div>
+              <div className="flex items-center gap-2">
+                 <div className="w-3 h-3 bg-white border border-slate-200 rounded-sm"></div>
+                 <span className="text-[8px] font-black text-slate-300 uppercase tracking-widest">Inativo</span>
+              </div>
            </div>
-           <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-slate-100 border border-slate-200"></div>
-              <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Período Ocioso</span>
-           </div>
+           <p className="text-[8px] font-bold text-slate-400 uppercase italic tracking-widest">Sincronização Ativa v2.5</p>
         </div>
       </div>
 
