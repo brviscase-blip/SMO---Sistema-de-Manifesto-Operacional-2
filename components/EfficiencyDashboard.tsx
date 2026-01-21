@@ -1,7 +1,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { Manifesto } from '../types';
-import { BarChart3, Clock, TrendingUp, Award, Timer, Target, Calendar, Filter } from 'lucide-react';
+import { BarChart3, Clock, TrendingUp, Award, Timer, Users, Box, Zap, Calendar, Filter, ChevronRight } from 'lucide-react';
 import { CustomDateTimePicker } from './CustomDateTimePicker';
 
 interface EfficiencyDashboardProps {
@@ -9,44 +9,31 @@ interface EfficiencyDashboardProps {
 }
 
 export const EfficiencyDashboard: React.FC<EfficiencyDashboardProps> = ({ manifestos }) => {
-  // CONFIGURAÇÃO DE DATAS PADRÃO (HOJE)
   const [dateRange, setDateRange] = useState({
     start: new Date(new Date().setHours(0, 0, 0, 0)).toISOString(),
     end: new Date(new Date().setHours(23, 59, 59, 999)).toISOString()
   });
 
-  // LÓGICA DE PARSING: Robusta para ISO e BR
   const parseAnyDate = (dateStr: string | undefined): Date | null => {
     if (!dateStr || dateStr === '---' || dateStr === '') return null;
-    
     try {
       const directDate = new Date(dateStr);
       if (!isNaN(directDate.getTime())) return directDate;
-
       const parts = dateStr.split(/[\/\s,:]+/);
       if (parts.length >= 5) {
-        const day = parseInt(parts[0], 10);
-        const month = parseInt(parts[1], 10) - 1;
-        const year = parseInt(parts[2], 10);
-        const hour = parseInt(parts[3], 10);
-        const minute = parseInt(parts[4], 10);
-        const d = new Date(year, month, day, hour, minute);
+        const d = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]), parseInt(parts[3]), parseInt(parts[4]));
         if (!isNaN(d.getTime())) return d;
       }
       return null;
     } catch { return null; }
   };
 
-  // FILTRAGEM DOS MANIFESTOS PELO PERÍODO SELECIONADO
   const filteredManifestos = useMemo(() => {
     const start = new Date(dateRange.start);
     const end = new Date(dateRange.end);
-
     return manifestos.filter(m => {
-      // Consideramos a data de Recebido ou Puxado como referência para o período
       const mDate = parseAnyDate(m.dataHoraRecebido) || parseAnyDate(m.dataHoraPuxado);
-      if (!mDate) return false;
-      return mDate >= start && mDate <= end;
+      return mDate && mDate >= start && mDate <= end;
     });
   }, [manifestos, dateRange]);
 
@@ -58,252 +45,191 @@ export const EfficiencyDashboard: React.FC<EfficiencyDashboardProps> = ({ manife
     return `${h}h ${m}m`;
   };
 
-  // 1. PRODUTIVIDADE OPERACIONAL (RANKING) - BASEADO NO FILTRO
-  const stats = useMemo(() => {
-    const cadastros: Record<string, number> = {};
-    const atribuicoes: Record<string, number> = {};
+  // CÁLCULOS
+  const atribuicaoRank = useMemo(() => {
+    const counts: Record<string, number> = {};
     filteredManifestos.forEach(m => {
-      if (m.status === 'Manifesto Entregue' || m.status === 'Manifesto Finalizado') {
-        if (m.usuario) cadastros[m.usuario] = (cadastros[m.usuario] || 0) + 1;
-        if (m.usuarioResponsavel) atribuicoes[m.usuarioResponsavel] = (atribuicoes[m.usuarioResponsavel] || 0) + 1;
-      }
+      if (m.usuarioResponsavel) counts[m.usuarioResponsavel] = (counts[m.usuarioResponsavel] || 0) + 1;
     });
-    return {
-      cadastroRank: Object.entries(cadastros).sort((a, b) => b[1] - a[1]).slice(0, 10),
-      atribuicaoRank: Object.entries(atribuicoes).sort((a, b) => b[1] - a[1]).slice(0, 10)
-    };
+    return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 7);
   }, [filteredManifestos]);
 
-  // 2. INDICADORES DE TEMPO (SLA MÉDIO) - BASEADO NO FILTRO
+  const turnStats = useMemo(() => {
+    const turns = { t1: 0, t2: 0, t3: 0, t1_e: 0, t2_e: 0, t3_e: 0 };
+    filteredManifestos.forEach(m => {
+      const d = parseAnyDate(m.dataHoraRecebido);
+      if (!d) return;
+      const hour = d.getHours();
+      const isEntregue = m.status === 'Manifesto Entregue';
+      if (hour >= 6 && hour < 14) { turns.t1++; if (isEntregue) turns.t1_e++; }
+      else if (hour >= 14 && hour < 22) { turns.t2++; if (isEntregue) turns.t2_e++; }
+      else { turns.t3++; if (isEntregue) turns.t3_e++; }
+    });
+    return turns;
+  }, [filteredManifestos]);
+
   const slaStats = useMemo(() => {
-    let totalEspera = 0, countEspera = 0;
-    let totalPuxada = 0, countPuxada = 0;
-    let totalLiberacao = 0, countLiberacao = 0;
+    let tE = 0, cE = 0, tP = 0, cP = 0, tA = 0, cA = 0;
     filteredManifestos.forEach(m => {
-      const recebido = parseAnyDate(m.dataHoraRecebido);
-      const iniciado = parseAnyDate(m.dataHoraIniciado);
-      const completo = parseAnyDate(m.dataHoraCompleto);
-      const entregue = parseAnyDate(m.dataHoraEntregue);
-      if (recebido && iniciado) {
-        const diff = (iniciado.getTime() - recebido.getTime()) / 60000;
-        if (diff > 0) { totalEspera += diff; countEspera++; }
-      }
-      if (iniciado && completo) {
-        const diff = (completo.getTime() - iniciado.getTime()) / 60000;
-        if (diff > 0) { totalPuxada += diff; countPuxada++; }
-      }
-      if (completo && entregue) {
-        const diff = (entregue.getTime() - completo.getTime()) / 60000;
-        if (diff > 0) { totalLiberacao += diff; countLiberacao++; }
-      }
+      const rec = parseAnyDate(m.dataHoraRecebido);
+      const ini = parseAnyDate(m.dataHoraIniciado);
+      const com = parseAnyDate(m.dataHoraCompleto);
+      const ass = parseAnyDate(m.dataHoraRepresentanteCIA);
+      if (rec && ini) { tE += (ini.getTime() - rec.getTime()) / 60000; cE++; }
+      if (ini && com) { tP += (com.getTime() - ini.getTime()) / 60000; cP++; }
+      if (com && ass) { tA += (ass.getTime() - com.getTime()) / 60000; cA++; }
     });
-    return {
-      avgEspera: countEspera > 0 ? totalEspera / countEspera : 0,
-      avgPuxada: countPuxada > 0 ? totalPuxada / countPuxada : 0,
-      avgLiberacao: countLiberacao > 0 ? totalLiberacao / countLiberacao : 0
-    };
+    return { e: cE > 0 ? tE / cE : 0, p: cP > 0 ? tP / cP : 0, a: cA > 0 ? tA / cA : 0 };
   }, [filteredManifestos]);
 
-  // 3. VOLUME HORA A HORA - BASEADO NO FILTRO
   const hourlyStats = useMemo(() => {
     const hours: Record<number, number> = {};
     for (let i = 0; i < 24; i++) hours[i] = 0;
-    
     filteredManifestos.forEach(m => {
-      const d = parseAnyDate(m.dataHoraRecebido) || parseAnyDate(m.dataHoraPuxado);
-      if (d) {
-        const hour = d.getHours();
-        hours[hour]++;
-      }
+      const d = parseAnyDate(m.dataHoraRecebido);
+      if (d) hours[d.getHours()]++;
     });
     return Object.entries(hours).map(([h, count]) => ({ hour: parseInt(h), count }));
   }, [filteredManifestos]);
 
-  const maxHourlyCount = useMemo(() => {
-    const counts = hourlyStats.map(h => h.count);
-    return Math.max(...counts, 1);
-  }, [hourlyStats]);
+  const maxHourlyCount = Math.max(...hourlyStats.map(h => h.count), 1);
 
   return (
-    <div className="flex flex-col gap-4 animate-fadeIn h-[calc(100vh-140px)] overflow-hidden">
+    <div className="flex flex-col gap-6 animate-fadeIn">
       
-      {/* HEADER FIXO COM FILTRO DE DATA */}
-      <div className="bg-[#0f172a] border-2 border-slate-800 p-3 flex items-center justify-between shadow-lg shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="p-1.5 bg-indigo-500 rounded">
-            <BarChart3 size={18} className="text-white" />
+      {/* HEADER PRINCIPAL (Padrão SMO) */}
+      <div className="bg-[#0f172a] border-2 border-slate-800 p-4 flex flex-col md:flex-row items-center justify-between shadow-xl">
+        <div className="flex items-center gap-4">
+          <div className="p-2 bg-indigo-600 shadow-lg">
+            <BarChart3 size={20} className="text-white" />
           </div>
           <div>
-            <h2 className="text-[12px] font-black text-white uppercase tracking-[0.2em]">EFICIÊNCIA OPERACIONAL</h2>
-            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Analytics Dashboard v2.5</p>
+            <h2 className="text-[14px] font-black text-white uppercase tracking-[0.25em]">EFICIÊNCIA OPERACIONAL</h2>
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Analytics Dashboard v2.5</p>
           </div>
         </div>
 
-        {/* ÁREA DE FILTROS SINALIZADA */}
-        <div className="flex items-center gap-4">
-           <div className="flex items-center gap-2 bg-slate-800/50 p-1.5 border border-slate-700">
-              <div className="flex flex-col">
-                 <label className="text-[7px] font-black text-slate-500 uppercase ml-1 mb-0.5 tracking-widest">Data Início</label>
-                 <div className="w-36">
-                    <CustomDateTimePicker 
-                      value={dateRange.start} 
-                      onChange={(val) => setDateRange(prev => ({ ...prev, start: val }))} 
-                    />
-                 </div>
-              </div>
-              <div className="w-px h-6 bg-slate-700 mx-1 self-end mb-1"></div>
-              <div className="flex flex-col">
-                 <label className="text-[7px] font-black text-slate-500 uppercase ml-1 mb-0.5 tracking-widest">Data Fim</label>
-                 <div className="w-36">
-                    <CustomDateTimePicker 
-                      value={dateRange.end} 
-                      onChange={(val) => setDateRange(prev => ({ ...prev, end: val }))} 
-                    />
-                 </div>
-              </div>
-           </div>
-
-           <div className="flex items-center gap-2 px-3 py-2 bg-slate-800 border border-slate-700">
-              <Timer size={14} className="text-indigo-400" />
-              <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Live Sync</span>
-           </div>
+        <div className="flex items-center gap-4 mt-4 md:mt-0">
+          <div className="flex items-center gap-2 bg-slate-800 p-2 border border-slate-700">
+             <div className="flex flex-col">
+                <label className="text-[8px] font-black text-slate-500 uppercase ml-1 tracking-widest">Filtrar Período</label>
+                <div className="flex items-center gap-2">
+                   <div className="w-32"><CustomDateTimePicker value={dateRange.start} onChange={v => setDateRange(p => ({...p, start: v}))} /></div>
+                   <div className="w-4 h-[1px] bg-slate-600"></div>
+                   <div className="w-32"><CustomDateTimePicker value={dateRange.end} onChange={v => setDateRange(p => ({...p, end: v}))} /></div>
+                </div>
+             </div>
+          </div>
         </div>
       </div>
 
-      {/* GRUPO SUPERIOR (RANKINGS E SLA) */}
-      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="bg-white border-2 border-slate-200 shadow-sm flex flex-col h-full overflow-hidden">
-          <div className="p-2 border-b bg-slate-50 flex items-center gap-2 shrink-0">
-             <Award size={14} className="text-indigo-600" />
-             <h3 className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Ranking Cadastro</h3>
+      {/* GRID SUPERIOR (3 Blocos) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+        
+        {/* BLOCO 1: RANKING (4/12) */}
+        <div className="lg:col-span-4 bg-white border-2 border-slate-200 panel-shadow flex flex-col overflow-hidden">
+          <div className="bg-slate-50 px-5 py-3 border-b-2 border-slate-200 flex items-center justify-between">
+            <h3 className="text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] flex items-center gap-2">
+              <Award size={14} className="text-indigo-600" /> Ranking Atribuição
+            </h3>
           </div>
-          <div className="p-4 flex-1 flex flex-col justify-start space-y-2.5 overflow-y-auto custom-scrollbar">
-            {stats.cadastroRank.length === 0 ? (
-              <div className="flex flex-col items-center py-10 opacity-30">
-                <p className="text-[10px] text-slate-400 font-black uppercase italic">Sem Cargas No Período</p>
-              </div>
+          <div className="p-4 flex-1 space-y-2">
+            {atribuicaoRank.length === 0 ? (
+              <div className="h-40 flex items-center justify-center text-slate-300 text-[10px] font-bold uppercase italic">Sem dados ativos</div>
             ) : (
-              stats.cadastroRank.map(([name, count], idx) => (
-                <div key={name} className="flex items-center justify-between border-b border-slate-50 pb-1.5">
-                   <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-black w-4.5 h-4.5 flex items-center justify-center bg-slate-100 text-slate-400 rounded-sm">{idx + 1}</span>
-                      <span className="text-[10px] font-black text-slate-600 uppercase truncate max-w-[140px]">{name}</span>
-                   </div>
-                   <div className="flex items-center gap-1.5">
-                      <span className="text-[11px] font-black text-indigo-600 font-mono-tech">{count}</span>
-                      <span className="text-[8px] font-bold text-slate-300 uppercase">UN</span>
-                   </div>
+              atribuicaoRank.map(([name, count], idx) => (
+                <div key={name} className="flex items-center justify-between bg-slate-50 p-2.5 border-l-4 border-indigo-500 hover:bg-indigo-50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <span className="text-[11px] font-black text-indigo-600 font-mono">#{idx+1}</span>
+                    <span className="text-[10px] font-black text-slate-700 uppercase truncate max-w-[150px]">{name}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-sm font-black text-slate-900 font-mono-tech">{count}</span>
+                    <span className="text-[8px] font-bold text-slate-400 uppercase ml-1">un</span>
+                  </div>
                 </div>
               ))
             )}
           </div>
         </div>
 
-        <div className="bg-white border-2 border-slate-200 shadow-sm flex flex-col h-full overflow-hidden">
-          <div className="p-2 border-b bg-slate-50 flex items-center gap-2 shrink-0">
-             <Target size={14} className="text-emerald-600" />
-             <h3 className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Ranking Atribuição</h3>
-          </div>
-          <div className="p-4 flex-1 flex flex-col justify-start space-y-2.5 overflow-y-auto custom-scrollbar">
-            {stats.atribuicaoRank.length === 0 ? (
-              <div className="flex flex-col items-center py-10 opacity-30">
-                <p className="text-[10px] text-slate-400 font-black uppercase italic">Sem Registros Atribuídos</p>
+        {/* BLOCO 2: TURNOS (4/12) */}
+        <div className="lg:col-span-4 grid grid-rows-3 gap-4">
+          {[
+            { label: '1º TURNO (06:00 - 13:59)', count: turnStats.t1, done: turnStats.t1_e, color: 'border-blue-500' },
+            { label: '2º TURNO (14:00 - 21:59)', count: turnStats.t2, done: turnStats.t2_e, color: 'border-amber-500' },
+            { label: '3º TURNO (22:00 - 05:59)', count: turnStats.t3, done: turnStats.t3_e, color: 'border-indigo-600' }
+          ].map((t, i) => (
+            <div key={i} className={`bg-white border-2 border-slate-200 panel-shadow flex items-center justify-between px-6 border-l-8 ${t.color}`}>
+              <div>
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{t.label}</p>
+                <p className="text-[10px] font-bold text-slate-600 uppercase mt-1">Total Manifesto</p>
               </div>
-            ) : (
-              stats.atribuicaoRank.map(([name, count], idx) => (
-                <div key={name} className="flex items-center justify-between border-b border-slate-50 pb-1.5">
-                   <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-black w-4.5 h-4.5 flex items-center justify-center bg-slate-100 text-slate-400 rounded-sm">{idx + 1}</span>
-                      <span className="text-[10px] font-black text-slate-600 uppercase truncate max-w-[140px]">{name}</span>
-                   </div>
-                   <div className="flex items-center gap-1.5">
-                      <span className="text-[11px] font-black text-emerald-600 font-mono-tech">{count}</span>
-                      <span className="text-[8px] font-bold text-slate-300 uppercase">UN</span>
-                   </div>
-                </div>
-              ))
-            )}
-          </div>
+              <div className="text-right">
+                <p className="text-3xl font-black text-slate-900 font-mono-tech leading-none">{t.count}</p>
+                <p className="text-[8px] font-black text-emerald-600 uppercase mt-1">Entregues: {t.done}</p>
+              </div>
+            </div>
+          ))}
         </div>
 
-        <div className="bg-slate-900 border-2 border-slate-800 shadow-sm text-white flex flex-col justify-start p-6 h-full space-y-6">
-           <div className="flex items-center justify-between border-l-2 border-blue-500 pl-4">
-              <div>
-                 <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">SLA Médio Espera</p>
-                 <p className="text-[10px] font-bold text-slate-400 uppercase">Rec ➔ Ini</p>
-              </div>
-              <p className="text-xl font-black text-blue-400 font-mono-tech leading-none">{formatMinutes(slaStats.avgEspera)}</p>
-           </div>
-           <div className="flex items-center justify-between border-l-2 border-amber-500 pl-4">
-              <div>
-                 <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">SLA Médio Puxe</p>
-                 <p className="text-[10px] font-bold text-slate-400 uppercase">Ini ➔ Com</p>
-              </div>
-              <p className="text-xl font-black text-amber-400 font-mono-tech leading-none">{formatMinutes(slaStats.avgPuxada)}</p>
-           </div>
-           <div className="flex items-center justify-between border-l-2 border-emerald-500 pl-4">
-              <div>
-                 <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">SLA Médio Entrega</p>
-                 <p className="text-[10px] font-bold text-slate-400 uppercase">Com ➔ Ent</p>
-              </div>
-              <p className="text-xl font-black text-emerald-400 font-mono-tech leading-none">{formatMinutes(slaStats.avgLiberacao)}</p>
-           </div>
+        {/* BLOCO 3: SLA / LEAD TIME (4/12) */}
+        <div className="lg:col-span-4 grid grid-rows-3 gap-4">
+          {[
+            { label: 'MANIFESTO INICIADO – RECEBIDO', val: slaStats.e, sub: 'Tempo de Espera', color: 'text-blue-600' },
+            { label: 'MANIFESTO FINALIZADO – INICIADO', val: slaStats.p, sub: 'Tempo de Puxe', color: 'text-amber-600' },
+            { label: 'ASSINATURA – FINALIZADO', val: slaStats.a, sub: 'Tempo Assinatura', color: 'text-emerald-600' }
+          ].map((s, i) => (
+            <div key={i} className="bg-slate-900 border-2 border-slate-800 panel-shadow flex flex-col justify-center px-6 items-center text-center">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{s.label}</p>
+              <p className={`text-3xl font-black font-mono-tech leading-none ${s.color}`}>{formatMinutes(s.val)}</p>
+              <p className="text-[8px] font-bold text-slate-600 uppercase mt-1 italic">{s.sub}</p>
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* GRUPO INFERIOR (FLUXO HORÁRIO) */}
-      <div className="bg-white border-2 border-slate-200 shadow-sm overflow-hidden flex flex-col flex-1 min-h-0">
-        <div className="p-3 border-b bg-slate-50 flex items-center justify-between shrink-0">
-           <div className="flex items-center gap-2">
-              <TrendingUp size={14} className="text-slate-600" />
-              <h3 className="text-[10px] font-black text-slate-800 uppercase tracking-[0.2em]">Fluxo de Recebimento Horário</h3>
-           </div>
-           <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-1 rounded-full border border-indigo-100 uppercase">
-             {filteredManifestos.length} Manifestos no Período
-           </span>
+      {/* BLOCO 4: FLUXO HORA A HORA (FULL WIDTH) */}
+      <div className="bg-white border-2 border-slate-200 panel-shadow overflow-hidden flex flex-col">
+        <div className="bg-slate-50 px-5 py-3 border-b-2 border-slate-200 flex items-center justify-between">
+          <h3 className="text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] flex items-center gap-2">
+            <Clock size={14} className="text-indigo-600" /> Manifesto Recebido Hora a Hora
+          </h3>
+          <span className="text-[9px] font-black text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-full">Fluxo Diário</span>
         </div>
         
-        <div className="flex-1 flex flex-col justify-end p-4 px-10 min-h-0 pt-10">
-           <div className="flex-1 flex items-end gap-1 px-2 relative border-b-2 border-slate-100 w-full mb-2">
-              {hourlyStats.map(h => (
-                <div key={h.hour} className="flex-1 flex flex-col items-center group h-full justify-end relative">
-                   <div 
-                      className="relative w-full max-w-[28px] flex flex-col items-center" 
-                      style={{ height: `${(h.count / maxHourlyCount) * 70}%` }}
-                   >
-                      {h.count > 0 && (
-                        <span className="absolute -top-6 text-[10px] font-black text-slate-900 font-mono-tech whitespace-nowrap">
-                          {h.count}
-                        </span>
-                      )}
-                      <div 
-                        className={`w-full h-full transition-all duration-700 ease-out rounded-t-sm shadow-sm ${
-                          h.count > 0 ? 'bg-indigo-500 hover:bg-indigo-600' : 'bg-slate-50'
-                        }`}
-                      ></div>
-                   </div>
-                   <span className={`text-[10px] font-black font-mono leading-none mt-1.5 ${h.count > 0 ? 'text-indigo-600' : 'text-slate-400'}`}>
-                      {String(h.hour).padStart(2, '0')}
-                   </span>
+        <div className="p-8 h-64 flex flex-col justify-end">
+          <div className="flex-1 flex items-end gap-2 border-b-2 border-slate-100">
+            {hourlyStats.map(h => (
+              <div key={h.hour} className="flex-1 flex flex-col items-center group h-full justify-end">
+                <div 
+                  className="relative w-full max-w-[40px] flex flex-col items-center" 
+                  style={{ height: `${(h.count / maxHourlyCount) * 90}%` }}
+                >
+                  {h.count > 0 && (
+                    <span className="absolute -top-6 text-[10px] font-black text-indigo-600 font-mono-tech animate-fadeIn">
+                      {h.count}
+                    </span>
+                  )}
+                  <div className={`w-full h-full transition-all duration-500 ${h.count > 0 ? 'bg-indigo-500 group-hover:bg-indigo-700' : 'bg-slate-50 border-t border-slate-100'}`}></div>
                 </div>
-              ))}
-           </div>
+                <span className={`text-[9px] font-black font-mono-tech mt-3 ${h.count > 0 ? 'text-slate-900' : 'text-slate-300'}`}>
+                  {String(h.hour).padStart(2, '0')}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
 
-        <div className="p-3 bg-slate-50 border-t flex items-center justify-between px-6 shrink-0">
-           <div className="flex items-center gap-6">
-              <div className="flex items-center gap-2">
-                 <div className="w-2.5 h-2.5 bg-indigo-500 rounded-sm"></div>
-                 <span className="text-[10px] font-black text-slate-500 uppercase tracking-tight">Volume Operacional</span>
-              </div>
-              <div className="flex items-center gap-2">
-                 <div className="w-2.5 h-2.5 bg-slate-100 rounded-sm border border-slate-200"></div>
-                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-tight">Sem Registro</span>
-              </div>
+        <div className="p-3 bg-slate-50 border-t border-slate-100 flex items-center justify-center gap-6">
+           <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-indigo-500"></div>
+              <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Volume Recebimento</span>
            </div>
-           <p className="text-[10px] font-bold text-slate-400 uppercase italic tracking-tighter">
-              Amostra baseada em pico de {maxHourlyCount} manifestos/h no período.
-           </p>
+           <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-slate-100 border border-slate-200"></div>
+              <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Período Ocioso</span>
+           </div>
         </div>
       </div>
 
