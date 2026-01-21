@@ -162,7 +162,7 @@ export const EfficiencyDashboard: React.FC<EfficiencyDashboardProps> = ({ manife
               </div>
               <div className="text-right">
                 <p className="text-2xl font-black text-slate-900 font-mono-tech leading-none">{t.count}</p>
-                <p className="text-[8px] font-black text-emerald-600 uppercase mt-0.5">Concluídos: {t.done}</p>
+                <p className="text-[10px] font-black text-emerald-600 uppercase mt-0.5">Concluídos: {t.done}</p>
               </div>
             </div>
           ))}
