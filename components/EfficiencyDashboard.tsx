@@ -121,25 +121,25 @@ export const EfficiencyDashboard: React.FC<EfficiencyDashboardProps> = ({ manife
       {/* GRID SUPERIOR - Altura controlada para não empurrar o gráfico */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 shrink-0 h-[300px]">
         
-        {/* BLOCO 1: RANKING ATRIBUIÇÃO */}
+        {/* BLOCO 1: RANKING ATRIBUIÇÃO (FONTE AUMENTADA EM 20%) */}
         <div className="lg:col-span-4 bg-white border-2 border-slate-200 panel-shadow flex flex-col overflow-hidden">
           <div className="bg-slate-50 px-4 py-2 border-b-2 border-slate-200 flex items-center justify-between shrink-0">
-            <h3 className="text-[9px] font-black text-slate-600 uppercase tracking-[0.2em] flex items-center gap-2">
+            <h3 className="text-[11px] font-black text-slate-600 uppercase tracking-[0.2em] flex items-center gap-2">
               <Award size={12} className="text-indigo-600" /> Ranking Atribuição
             </h3>
           </div>
           <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1">
             {atribuicaoRank.length === 0 ? (
-              <div className="h-full flex items-center justify-center text-slate-300 text-[8px] font-bold uppercase italic">Sem dados ativos</div>
+              <div className="h-full flex items-center justify-center text-slate-300 text-[9px] font-bold uppercase italic">Sem dados ativos</div>
             ) : (
               atribuicaoRank.map(([name, count], idx) => (
                 <div key={name} className="flex items-center justify-between bg-slate-50/50 p-2 border-l-4 border-indigo-500">
                   <div className="flex items-center gap-2">
-                    <span className="text-[9px] font-black text-indigo-600 font-mono">#{idx+1}</span>
-                    <span className="text-[9px] font-black text-slate-700 uppercase truncate max-w-[150px]">{name}</span>
+                    <span className="text-[11px] font-black text-indigo-600 font-mono">#{idx+1}</span>
+                    <span className="text-[11px] font-black text-slate-700 uppercase truncate max-w-[150px]">{name}</span>
                   </div>
                   <div className="text-right">
-                    <span className="text-xs font-black text-slate-900 font-mono-tech">{count}</span>
+                    <span className="text-sm font-black text-slate-900 font-mono-tech">{count}</span>
                   </div>
                 </div>
               ))
@@ -156,8 +156,8 @@ export const EfficiencyDashboard: React.FC<EfficiencyDashboardProps> = ({ manife
           ].map((t, i) => (
             <div key={i} className={`bg-white border-2 border-slate-200 panel-shadow flex items-center justify-between px-6 border-l-4 ${t.color}`}>
               <div>
-                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{t.label}</p>
-                <p className="text-[9px] font-bold text-slate-600 uppercase">Manifestos</p>
+                <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest leading-none">{t.label}</p>
+                <p className="text-[12px] font-bold text-slate-600 uppercase mt-1">Manifestos</p>
               </div>
               <div className="text-right">
                 <p className="text-2xl font-black text-slate-900 font-mono-tech leading-none">{t.count}</p>
@@ -180,7 +180,7 @@ export const EfficiencyDashboard: React.FC<EfficiencyDashboardProps> = ({ manife
               </div>
               <div className="flex-1 px-4 py-2">
                  <div className="flex items-center justify-between">
-                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">{s.label}</p>
+                    <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.15em] leading-none">{s.label}</p>
                     <p className={`text-2xl font-black font-mono-tech leading-none ${s.color}`}>{formatMinutes(s.val)}</p>
                  </div>
               </div>
@@ -189,7 +189,7 @@ export const EfficiencyDashboard: React.FC<EfficiencyDashboardProps> = ({ manife
         </div>
       </div>
 
-      {/* BLOCO 4: FLUXO HORA A HORA - Toma o resto do espaço disponível */}
+      {/* BLOCO 4: FLUXO HORA A HORA */}
       <div className="bg-white border-2 border-slate-200 panel-shadow overflow-hidden flex flex-col flex-1 min-h-0">
         <div className="bg-slate-50 px-5 py-2 border-b-2 border-slate-200 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2">
