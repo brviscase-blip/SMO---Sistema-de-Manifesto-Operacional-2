@@ -50,7 +50,8 @@ export const EfficiencyDashboard: React.FC<EfficiencyDashboardProps> = ({ manife
     filteredManifestos.forEach(m => {
       if (m.usuarioResponsavel) counts[m.usuarioResponsavel] = (counts[m.usuarioResponsavel] || 0) + 1;
     });
-    return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 8);
+    // Ajustado para 7 itens para garantir encaixe perfeito com fonte maior
+    return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 7);
   }, [filteredManifestos]);
 
   const turnStats = useMemo(() => {
@@ -118,28 +119,28 @@ export const EfficiencyDashboard: React.FC<EfficiencyDashboardProps> = ({ manife
         </div>
       </div>
 
-      {/* GRID SUPERIOR - Altura controlada para não empurrar o gráfico */}
+      {/* GRID SUPERIOR - Altura fixa controlada */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 shrink-0 h-[300px]">
         
-        {/* BLOCO 1: RANKING ATRIBUIÇÃO (FONTE AUMENTADA EM 20%) */}
+        {/* BLOCO 1: RANKING ATRIBUIÇÃO (FONTE +20% E COMPACTADO) */}
         <div className="lg:col-span-4 bg-white border-2 border-slate-200 panel-shadow flex flex-col overflow-hidden">
           <div className="bg-slate-50 px-4 py-2 border-b-2 border-slate-200 flex items-center justify-between shrink-0">
             <h3 className="text-[11px] font-black text-slate-600 uppercase tracking-[0.2em] flex items-center gap-2">
               <Award size={12} className="text-indigo-600" /> Ranking Atribuição
             </h3>
           </div>
-          <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1">
+          <div className="flex-1 overflow-hidden p-1.5 space-y-0.5">
             {atribuicaoRank.length === 0 ? (
               <div className="h-full flex items-center justify-center text-slate-300 text-[9px] font-bold uppercase italic">Sem dados ativos</div>
             ) : (
               atribuicaoRank.map(([name, count], idx) => (
-                <div key={name} className="flex items-center justify-between bg-slate-50/50 p-2 border-l-4 border-indigo-500">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[11px] font-black text-indigo-600 font-mono">#{idx+1}</span>
-                    <span className="text-[11px] font-black text-slate-700 uppercase truncate max-w-[150px]">{name}</span>
+                <div key={name} className="flex items-center justify-between bg-slate-50/50 py-1.5 px-3 border-l-4 border-indigo-500">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-[13px] font-black text-indigo-600 font-mono shrink-0">#{idx+1}</span>
+                    <span className="text-[13px] font-black text-slate-700 uppercase truncate">{name}</span>
                   </div>
-                  <div className="text-right">
-                    <span className="text-sm font-black text-slate-900 font-mono-tech">{count}</span>
+                  <div className="text-right shrink-0">
+                    <span className="text-[14px] font-black text-slate-900 font-mono-tech">{count}</span>
                   </div>
                 </div>
               ))
@@ -189,7 +190,7 @@ export const EfficiencyDashboard: React.FC<EfficiencyDashboardProps> = ({ manife
         </div>
       </div>
 
-      {/* BLOCO 4: FLUXO HORA A HORA */}
+      {/* BLOCO 4: FLUXO HORA A HORA - Altura Dinâmica */}
       <div className="bg-white border-2 border-slate-200 panel-shadow overflow-hidden flex flex-col flex-1 min-h-0">
         <div className="bg-slate-50 px-5 py-2 border-b-2 border-slate-200 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2">
